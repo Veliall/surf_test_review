@@ -43,7 +43,7 @@ public class Index {
             // а тут 100% полетит ошибка при переполнении
             stream.forEach(files::add);
         } // я бы обрабатывал ошибку (а скорее ошибки) тут, оборачивая в кастомные ошибки приложения с описанием проблемы.
-        //а не прокидывал выше, хотя если это библа, а не серверный класс, то можно и пробросить
+        //а не прокидывал выше, хотя если это библа, а не сервисный класс, то можно и пробросить
 
         // ну и как-то некрасиво так в лоб три раза копипастить) DRY!
         // лучше вынести количество потоков либо в константу и в цикле запустить по константе,
@@ -61,6 +61,9 @@ public class Index {
 
     //Это не C# и не Go) пишем методы с маленькой буквы)
     public List<Pointer> GetRelevantDocuments(String term) {
+        // потенциальный NPE
+        // а также вернёт null если нет ничего по входящему ключу,
+        // это не очень хорошо, лучше в таком случае вернуть пустую коллекцию
         return invertedIndex.get(term);
     }
 
@@ -79,6 +82,7 @@ public class Index {
     static class Pointer {
 
         // желательно final поля
+        // имеет смысл использовать примитивный тип int
         private Integer count;
         private String filePath;
 
@@ -113,12 +117,16 @@ public class Index {
                         .flatMap(str -> Stream.of(str.split(" ")))
                         .forEach(word -> invertedIndex.compute(word, (k, v) -> {
                             // немодифицируемая версия листа вернётся
-                            // и следует подумать о том, что этот код будет выполнятся в мнопоточной среде
-                            // и модифицировать данные будут разные потоки, race condition однозначно
+                            // и следует подумать о том, что этот код будет выполнятся в многопоточной среде
+                            // и модифицировать данные будут разные потоки,
+                            // race condition, если использовать обычные коллекции
                     if (v == null) return List.of(new Pointer(1, take.toString()));
+                    // есть return после if, else лучше опустить для лучше читабельности
                     else {
                         ArrayList<Pointer> pointers = new ArrayList<>();
 
+                        // два раза цикл гоняем, да ещё и с ошибкой подсчёта, если документ добавляется впервые
+                        // (сразу инициализируем с 1 и ему тоже прибавляем в след. цикле)
                         if (v.stream().noneMatch(pointer -> pointer.filePath.equals(take.toString()))) {
                             pointers.add(new Pointer(1, take.toString()));
                         }
@@ -126,6 +134,7 @@ public class Index {
                         v.forEach(pointer -> {
                             if (pointer.filePath.equals(take.toString())) {
                                 pointer.count = pointer.count + 1;
+                                // камон, инкремент)) не ошибка конечно, ну как-то)))
                             }
                         });
 
