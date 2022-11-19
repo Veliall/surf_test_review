@@ -123,7 +123,7 @@ public class Index {
                             // вынести бы этот кусок в отдельный метод, чтобы легче тестировать и читать,
                             // и можно будет заменить compute на merge с вызовом метода
                     if (v == null) return List.of(new Pointer(1, take.toString()));
-                    // есть return после if, else лучше опустить для лучше читабельности
+                    // есть return после if, else лучше опустить для лучшей читабельности
                     else {
                         ArrayList<Pointer> pointers = new ArrayList<>();
 
